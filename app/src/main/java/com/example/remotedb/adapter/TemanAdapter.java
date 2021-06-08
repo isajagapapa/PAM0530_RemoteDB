@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,12 +21,22 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.example.remotedb.EditTeman;
 import com.example.remotedb.MainActivity;
 import com.example.remotedb.R;
+import com.example.remotedb.app.AppController;
 import com.example.remotedb.database.Teman;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class TemanAdapter extends RecyclerView.Adapter<TemanAdapter.TemanViewHolder> {
     private ArrayList<Teman> listData;
@@ -44,8 +55,9 @@ public class TemanAdapter extends RecyclerView.Adapter<TemanAdapter.TemanViewHol
 
     @Override
     public void onBindViewHolder(@NonNull TemanViewHolder holder, int position) {
-        String nm, tlp;
+        String nm, tlp, id;
 
+        id = listData.get(position).getId();
         nm = listData.get(position).getNama();
         tlp = listData.get(position).getTelpon();
 
@@ -57,9 +69,84 @@ public class TemanAdapter extends RecyclerView.Adapter<TemanAdapter.TemanViewHol
         holder.cardku.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
+                PopupMenu pm = new PopupMenu(v.getContext(), v);
+                pm.inflate(R.menu.popup1);
+                pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        switch (item.getItemId()){
+                            case R.id.edit:
+                                Bundle bendel = new Bundle();
+                                bendel.putString("kunci1", id);
+                                bendel.putString("kunci2", nm);
+                                bendel.putString("kunci3",tlp);
+                                Intent intent = new Intent(v.getContext(), EditTeman.class);
+                                intent.putExtras(bendel);
+                                v.getContext().startActivity(intent);
+                                break;
+                            case R.id.hapus:
+                                AlertDialog.Builder alertdb = new AlertDialog.Builder(v.getContext());
+                                alertdb.setTitle("Yakin " +nm+" akan dihapus?");
+                                alertdb.setMessage("Tekkan Ya untuk menghapus");
+                                alertdb.setCancelable(false);
+                                alertdb.setPositiveButton("Ya", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        HapusData(id);
+                                        Toast.makeText(v.getContext(), "Data "+id+" telah dihapus", Toast.LENGTH_LONG).show();
+                                        Intent intent1 = new Intent(v.getContext(), MainActivity.class);
+                                        v.getContext().startActivity(intent1);
+                                    }
+                                });
+                                alertdb.setNegativeButton("Tidak", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        dialog.cancel();
+                                    }
+                                });
+                                AlertDialog adlg = alertdb.create();
+                                adlg.show();
+                                break;
+                        }
+                        return true;
+                    }
+                });
+                pm.show();
                 return true;
             }
         });
+    }
+
+    public void HapusData(final String idx){
+        String url_delete = "http://10.0.2.2/umyTI/deletetm.php";
+        final String TAG = EditTeman.class.getSimpleName();
+        final String TAG_SUCCES = "success";
+        final int[] sukses = new int[1];
+
+        StringRequest stringReq = new StringRequest(Request.Method.POST, url_delete, new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                Log.d(TAG, "Response: " + response.toString());
+                try {
+                    JSONObject jObj = new JSONObject(response);
+                    sukses[0] = jObj.getInt(TAG_SUCCES);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, "Error: " + error.getMessage());
+            }
+        }){
+            protected Map<String,String> getParams(){
+                Map<String,String> params = new HashMap<>();
+                params.put("id",idx);
+                return params;
+            }
+        };
+        AppController.getInstance().addToRequestQueue(stringReq);
     }
 
     @Override

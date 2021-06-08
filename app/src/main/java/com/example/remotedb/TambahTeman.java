@@ -47,7 +47,6 @@ public class TambahTeman extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 SimpanData();
-                callHome();
             }
         });
     }
@@ -93,6 +92,7 @@ public class TambahTeman extends AppCompatActivity {
                 }
             };
             requestQueue.add(strReq);
+            callHome();
         }
     }
 
